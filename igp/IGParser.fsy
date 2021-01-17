@@ -1,0 +1,183 @@
+﻿%{
+
+  
+%}
+
+// The start token becomes a parser function in the compiled code:
+%start start
+
+// Regular tokens
+%token LP RP LB RB LC RC
+%token AND OR XOR NOT SEP
+%token <string> WS
+%token <string> DESCRIPTOR
+
+// IG Delimiters
+%token A_LP A_LC        // A(, A{
+%token Cac_LP Cac_LC    // Cac(, Cac{
+%token Cex_LP Cex_LC    // Cex(, Cex{
+%token Bdir_LP Bdir_LC  // Bdir(, Bdir{
+%token Bind_LP Bind_LC  // Bind(, Bind{
+%token D_LP             // D(
+%token I_LP             // I(
+%token E_LP E_LC        // E(, E{
+%token P_LP P_LC        // P(, P{
+%token M_LP             // M(
+%token F_LP             // F(
+
+// Misc tokens
+%token EOF
+
+// This is the type of the data produced by a successful reduction of the 'start'
+// symbol:
+%type < int > start
+
+%%
+
+// These are the rules of the grammar along with the F# code of the 
+// actions executed as rules are reduced.  
+start: 
+    | statement EOF         { 1 }
+
+descriptor:
+    | DESCRIPTOR { 0 }
+
+signeddescriptor:
+    | LP descriptor RP { 0 }
+    | NOT WS LP descriptor RP { 0 }
+
+nestedstatement:
+    | LP statement RP { 0 }
+
+simpledescriptors:
+    | signeddescriptor              { 0 }
+    | optional_not LP simpledescriptors WS and_or_xor WS simpledescriptors RP { 0 }
+
+complexdescriptors:
+    | signeddescriptor  { 0 }
+    | nestedstatement { 0 }
+    | optional_not LP complexdescriptors WS and_or_xor WS complexdescriptors RP { 0 }
+
+contextcategory:
+    | descriptor { 0 }
+
+actconditiontype:
+    | simpledescriptors LP contextcategory RP  { 0 } // spec uses "(" not LP
+
+actconditiontypes:
+    // NOTE: Syntax specification defines '*' allowed. This is not implemented here.
+    | optional_not actconditiontype  { 0 }
+    | LP optional_not actconditiontype WS and_or_xor WS optional_not actconditiontypes RP { 0 }
+
+conditions:
+    | Cac_LP actconditiontypes RP { 0 }
+    | Cac_LC nestedstatement RC { 0 }
+    | Cac_LP actconditiontypes RP WS and_or_xor WS Cac_LC nestedstatement RC { 0 }
+
+execconstrainttype:
+    | signeddescriptor LP contextcategory RP { 0 }
+
+execconstrainttypes:
+    | { 0 }
+    | optional_not execconstrainttype { 0 }
+    | LP optional_not execconstrainttype WS and_or_xor WS optional_not execconstrainttypes RP { 0 }
+
+constraints:
+    | Cex_LP execconstrainttypes RP { 0 }
+    | Cex_LC nestedstatement RC { 0 }
+    | Cex_LP execconstrainttypes RP WS and_or_xor WS Cex_LC nestedstatement RC { 0 }
+
+context:
+    | conditions WS constraints { 0 }
+
+attributes:
+    | A_LP simpledescriptors RP { 0 }
+    | A_LC nestedstatement RC { 0 }
+
+directobjects:
+    | descriptor WS and_or_xor WS LP directobjects RP { 0 }
+
+objectdir:
+    | Bdir_LP directobjects RP { 0 }
+    | Bdir_LC nestedstatement RC { 0 }
+
+indirectobjects:
+    | descriptor WS and_or_xor WS LP indirectobjects RP { 0 }
+
+objectind:
+    | Bind_LP indirectobjects RP { 0 }
+    | Bind_LC nestedstatement RC { 0 }
+
+object:
+    | objectdir { 0 }
+    | objectind { 0 }
+    | objectdir WS objectind { 0 }
+
+deontic:
+    | D_LP descriptor RP { 0 }
+
+aim:
+    | I_LP simpledescriptors RP { 0 }
+
+entity:
+    | E_LP simpledescriptors RP { 0 }
+    | E_LC nestedstatement RC { 0 }
+
+propertycombos:
+    | descriptor WS and_or_xor WS LP directobjects RP { 0 }
+
+properties:
+    | P_LP propertycombos RP { 0 }
+    | P_LC nestedstatement RC { 0 }
+
+modal:
+    | M_LP descriptor RP { 0 }
+
+function:
+    | F_LP simpledescriptors RP { 0 }
+
+aic:
+    | attributes aim context    { 0 }
+
+abdic:
+    | attributes object aim context    { 0 }
+    | attributes deontic aim context    { 0 }
+    | attributes object deontic aim context    { 0 }
+
+fec:
+    | function entity context { 0 }
+
+pmfec:
+    | properties function entity context { 0 }
+    | modal function entity context { 0 }
+    | properties modal function entity context { 0 }
+
+complexstatement:
+    | abdic { 0 }
+    | pmfec { 0 }
+    | LB NOT WS LP c_a_f RP RB { 0 }
+    | LB complexstatement optional_bracketed_c_a_f RB { 0 }
+    | LB LP c_a_f WS and_or_xor WS c_a_f RP RB { 0 }
+    
+statement:
+    | aic                   { $1 }
+    | fec                   { $1 }
+    | complexstatement      { $1 }
+
+and_or_xor:
+    | AND       { 0 }
+    | OR       { 0 }
+    | XOR       { 0 }
+
+optional_not:
+    | { 0 }
+    | NOT WS { 0 }
+
+c_a_f:
+    | complexstatement { 0 }
+    | aic { 0 }
+    | fec { 0 }
+
+optional_bracketed_c_a_f:
+    | { 0 }
+    | LB c_a_f RB { 0 }

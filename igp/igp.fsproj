@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FsYacc Include="IGParser.fsy">
+      <OtherFlags>--module IGParser</OtherFlags>
+    </FsYacc>
+    <Compile Include="IGParser.fs" />
+    <FsLex Include="IGLexer.fsl">
+      <OtherFlags>--module IGLexer --unicode</OtherFlags>
+    </FsLex>
+    <Compile Include="IGLexer.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FsLexYacc" Version="10.2.0" />
+  </ItemGroup>
+
+</Project>

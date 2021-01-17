@@ -1,0 +1,57 @@
+﻿{
+
+open FSharp.Text.Lexing
+
+let lexeme = LexBuffer<_>.LexemeString
+
+let IdentOrDescriptor (text: string) =
+    match text with
+    | "AND" -> IGParser.AND
+    | "OR"  -> IGParser.OR
+    | "XOR" -> IGParser.XOR
+    | "NOT" -> IGParser.NOT
+    | _     -> IGParser.DESCRIPTOR(text)
+    
+}
+
+// Regular expressions
+let ws = ' '
+let letter = '\Lu' | '\Ll' | '\Lt' | '\Lm' | '\Lo' | '\Nl'
+let digit = ['0'-'9']
+
+// Descriptive text as base structure
+let desriptor = letter (letter | digit | " " | ",")*
+
+rule igtokens = parse
+// --------------------------
+| ws                { IGParser.WS(lexeme lexbuf) }
+| "A("              { IGParser.A_LP }
+| "A{"              { IGParser.A_LC }
+| "Cac("            { IGParser.Cac_LP }
+| "Cac{"            { IGParser.Cac_LC }
+| "Cex("            { IGParser.Cex_LP }
+| "Cex{"            { IGParser.Cex_LC }
+| "Bdir("           { IGParser.Bdir_LP }
+| "Bdir{"           { IGParser.Bdir_LC }
+| "Bind("           { IGParser.Bind_LP }
+| "Bind{"           { IGParser.Bind_LC }
+| "D("              { IGParser.D_LP }
+| "I("              { IGParser.I_LP }
+| "E("              { IGParser.E_LP }
+| "E{"              { IGParser.E_LC }
+| "P("              { IGParser.P_LP }
+| "P{"              { IGParser.P_LC }
+| "M("              { IGParser.M_LP }
+| "F("              { IGParser.F_LP }
+| ';'               { IGParser.SEP }
+| '('               { IGParser.LP }
+| ')'               { IGParser.RP }
+| '['               { IGParser.LB }
+| ']'               { IGParser.RB }
+| '{'               { IGParser.LC }
+| '}'               { IGParser.RC }
+| desriptor 		{ IdentOrDescriptor (lexeme lexbuf) }
+
+// --------------------------
+| _    		{ failwith ("ParseError" + LexBuffer<_>.LexemeString lexbuf) }
+| eof   	{ IGParser.EOF }
